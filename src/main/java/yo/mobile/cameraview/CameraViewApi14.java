@@ -50,8 +50,8 @@ class CameraViewApi14 extends SurfaceView implements SurfaceHolder.Callback, Cam
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
         try {
-            mCamera.setPreviewDisplay(holder);
-            mCamera.startPreview();
+//            mCamera.setPreviewDisplay(holder);
+//            mCamera.startPreview();
         } catch (Throwable e) {
             Log.d(TAG, "Error setting camera preview: " + e.getMessage());
         }
