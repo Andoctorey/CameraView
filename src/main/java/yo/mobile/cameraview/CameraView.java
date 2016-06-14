@@ -15,6 +15,7 @@ public class CameraView extends FrameLayout {
     private OnCameraErrorListener onCameraErrorListener;
     private int frontCameraId;
     private int backCameraId;
+    private boolean cameraExist;
 
     public interface OnCameraErrorListener {
         void onNoCamerasAvailable();
@@ -43,7 +44,8 @@ public class CameraView extends FrameLayout {
         } else {
             cameraViewImpl = new CameraViewApi14(getContext(), this);
         }
-        if (cameraViewImpl.checkCameraExist()) {
+        cameraExist = cameraViewImpl.checkCameraExist();
+        if (cameraExist) {
             addView(cameraViewImpl.getView());
         }
     }
@@ -60,12 +62,12 @@ public class CameraView extends FrameLayout {
         cameraViewImpl.releaseCamera();
     }
 
-    public void useFrontCamera(boolean use) {
+    public void setUseFrontCamera(boolean use) {
         this.useFrontCamera = use;
     }
 
-    public boolean isUseFrontCamera() {
-        return useFrontCamera;
+    public boolean isCameraExist() {
+        return cameraExist;
     }
 
     public OnCameraErrorListener getOnCameraErrorListener() {
