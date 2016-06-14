@@ -10,7 +10,7 @@ import android.util.Log;
 import java.io.IOException;
 import java.util.List;
 
-import yo.mobile.cameraview.util.CameraHelper;
+import yo.mobile.cameraview.util.Camera1Helper;
 
 import static android.content.ContentValues.TAG;
 
@@ -24,7 +24,7 @@ public class Camera1 implements CameraViewImpl {
     public void initialize(CameraView cameraView, Context context) {
         this.cameraView = cameraView;
         this.context = context;
-        camera = CameraHelper.getDefaultCameraInstance();
+        camera = Camera1Helper.getDefaultCameraInstance();
         try {
             // Requires API level 11+, For backward compatibility use {@link setPreviewDisplay}
             // with {@link SurfaceView}
@@ -50,7 +50,7 @@ public class Camera1 implements CameraViewImpl {
             Camera.Parameters parameters = camera.getParameters();
             List<Camera.Size> mSupportedPreviewSizes = parameters.getSupportedPreviewSizes();
             List<Camera.Size> mSupportedVideoSizes = parameters.getSupportedVideoSizes();
-            Camera.Size optimalSize = CameraHelper.getOptimalVideoSize(mSupportedVideoSizes,
+            Camera.Size optimalSize = Camera1Helper.getOptimalVideoSize(mSupportedVideoSizes,
                     mSupportedPreviewSizes, width, height);
 
             // Use the same size for recording profile.
@@ -76,5 +76,10 @@ public class Camera1 implements CameraViewImpl {
             camera.release();
             camera = null;
         }
+    }
+
+    @Override
+    public void configureTransform(SurfaceTexture surface, int width, int height) {
+        // Ignored, Camera does all the work for us
     }
 }

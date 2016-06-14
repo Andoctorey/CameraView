@@ -30,7 +30,7 @@ import java.util.List;
 /**
  * Camera related utilities.
  */
-public class CameraHelper {
+public class Camera1Helper {
 
     public static final int MEDIA_TYPE_IMAGE = 1;
     public static final int MEDIA_TYPE_VIDEO = 2;

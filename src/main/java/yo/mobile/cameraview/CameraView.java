@@ -1,27 +1,21 @@
 package yo.mobile.cameraview;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.graphics.SurfaceTexture;
 import android.os.Build;
+import android.support.v4.content.ContextCompat;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.TextureView;
 
+import yo.mobile.cameraview.util.Camera2Helper;
+
 @SuppressWarnings("deprecation")
 public class CameraView extends TextureView implements TextureView.SurfaceTextureListener {
 
-    private static final CameraViewImpl IMPL;
-
-    static {
-        if (Build.VERSION.SDK_INT >= 21) {
-            IMPL = new Camera1();
-//        } else if (Build.VERSION.SDK_INT >= 17) {
-//            IMPL = new CardViewJellybeanMr1();
-        } else {
-            IMPL = new Camera1();
-        }
-    }
-
+    private static CameraViewImpl IMPL;
     private final static String TAG = CameraView.class.getSimpleName();
     //    private CameraViewImpl cameraViewImpl;
     private boolean useFrontCamera = true;
@@ -56,15 +50,16 @@ public class CameraView extends TextureView implements TextureView.SurfaceTextur
     }
 
     private void init(AttributeSet attrs, int defStyle) {
-//        if (Build.VERSION.SDK_INT >= 21) {
-//            cameraViewImpl = new CameraViewApi14(getContext(), this);
-//        } else {
-//            cameraViewImpl = new CameraViewApi14(getContext(), this);
-//        }
-//        cameraExist = cameraViewImpl.checkCameraExist();
-//        if (cameraExist) {
-//
-//        }
+        if (Build.VERSION.SDK_INT >= 23 && ContextCompat.checkSelfPermission(getContext(), Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+            throw new RuntimeException("No camera permission - Use FragmentCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);");
+        }
+        if (Build.VERSION.SDK_INT >= 21 && Camera2Helper.hasCamera2(getContext())) {
+            IMPL = new Camera2();
+        } else {
+            IMPL = new Camera1();
+        }
+        IMPL.initialize(this, getContext());
     }
 
     @Override
@@ -86,7 +81,7 @@ public class CameraView extends TextureView implements TextureView.SurfaceTextur
 
     @Override
     public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
-        // Ignored, Camera does all the work for us
+        IMPL.configureTransform(surface, width, height);
     }
 
     @Override

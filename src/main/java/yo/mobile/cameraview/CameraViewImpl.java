@@ -13,4 +13,6 @@ public interface CameraViewImpl {
     void openCamera(SurfaceTexture surface, int width, int height);
 
     void releaseCamera();
+
+    void configureTransform(SurfaceTexture surface, int width, int height);
 }
