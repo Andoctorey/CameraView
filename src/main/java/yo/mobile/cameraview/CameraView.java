@@ -43,7 +43,9 @@ public class CameraView extends FrameLayout {
         } else {
             cameraViewImpl = new CameraViewApi14(getContext(), this);
         }
-        addView(cameraViewImpl.getView());
+        if (cameraViewImpl.checkCameraExist()) {
+            addView(cameraViewImpl.getView());
+        }
     }
 
     @Override

@@ -7,6 +7,8 @@ public interface CameraViewImpl {
 
     View getView();
 
+    boolean checkCameraExist();
+
     void openCamera();
 
     void releaseCamera();

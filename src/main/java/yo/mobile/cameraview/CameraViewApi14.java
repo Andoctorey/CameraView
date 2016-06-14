@@ -1,5 +1,6 @@
 package yo.mobile.cameraview;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.hardware.Camera;
 import android.util.AttributeSet;
@@ -10,6 +11,7 @@ import android.view.View;
 
 import static android.content.ContentValues.TAG;
 
+@SuppressLint("ViewConstructor")
 @SuppressWarnings("deprecation")
 class CameraViewApi14 extends SurfaceView implements SurfaceHolder.Callback, CameraViewImpl {
 
@@ -19,21 +21,6 @@ class CameraViewApi14 extends SurfaceView implements SurfaceHolder.Callback, Cam
     private int mRatioWidth = 0;
     private int mRatioHeight = 0;
     private int frontCameraId;
-
-    CameraViewApi14(Context context) {
-        super(context);
-        init(null, 0);
-    }
-
-    CameraViewApi14(Context context, AttributeSet attrs) {
-        super(context, attrs);
-        init(attrs, 0);
-    }
-
-    CameraViewApi14(Context context, AttributeSet attrs, int defStyle) {
-        super(context, attrs, defStyle);
-        init(attrs, defStyle);
-    }
 
     CameraViewApi14(Context context, CameraView cameraView) {
         super(context);
@@ -117,11 +104,11 @@ class CameraViewApi14 extends SurfaceView implements SurfaceHolder.Callback, Cam
     }
 
     @Override
-    public void openCamera() {
+    public boolean checkCameraExist() {
         int numberOfCameras = Camera.getNumberOfCameras();
         if (numberOfCameras == 0) {
             cameraView.getOnCameraErrorListener().onNoCamerasAvailable();
-            return;
+            return false;
         }
 
         for (int i = 0; i < numberOfCameras; i++) {
@@ -133,7 +120,11 @@ class CameraViewApi14 extends SurfaceView implements SurfaceHolder.Callback, Cam
                 cameraView.setBackCameraId(i);
             }
         }
+        return true;
+    }
 
+    @Override
+    public void openCamera() {
         try {
             releaseCamera();
             mCamera = Camera.open(cameraView.getCameraId());
