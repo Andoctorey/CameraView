@@ -1,16 +1,23 @@
 package yo.mobile.cameraview;
 
 import android.content.Context;
-import android.os.Build;
+import android.graphics.SurfaceTexture;
+import android.hardware.Camera;
+import android.media.CamcorderProfile;
 import android.util.AttributeSet;
 import android.util.Log;
-import android.widget.FrameLayout;
+import android.view.TextureView;
+
+import java.io.IOException;
+import java.util.List;
+
+import yo.mobile.cameraview.util.CameraHelper;
 
 @SuppressWarnings("deprecation")
-public class CameraView extends FrameLayout {
+public class CameraView extends TextureView implements TextureView.SurfaceTextureListener {
 
     private final static String TAG = CameraView.class.getSimpleName();
-    private CameraViewImpl cameraViewImpl;
+    //    private CameraViewImpl cameraViewImpl;
     private boolean useFrontCamera = true;
     private OnCameraErrorListener onCameraErrorListener;
     private int frontCameraId;
@@ -18,6 +25,7 @@ public class CameraView extends FrameLayout {
     private boolean cameraExist;
     private int preferredHeight = 720;
     private float preferredAspect = 4f / 3f;
+    private Camera mCamera;
 
     public interface OnCameraErrorListener {
         void onNoCamerasAvailable();
@@ -41,27 +49,84 @@ public class CameraView extends FrameLayout {
     }
 
     private void init(AttributeSet attrs, int defStyle) {
-        if (Build.VERSION.SDK_INT >= 21) {
-            cameraViewImpl = new CameraViewApi14(getContext(), this);
-        } else {
-            cameraViewImpl = new CameraViewApi14(getContext(), this);
-        }
-        cameraExist = cameraViewImpl.checkCameraExist();
-        if (cameraExist) {
-            addView(cameraViewImpl.getView());
-        }
+//        if (Build.VERSION.SDK_INT >= 21) {
+//            cameraViewImpl = new CameraViewApi14(getContext(), this);
+//        } else {
+//            cameraViewImpl = new CameraViewApi14(getContext(), this);
+//        }
+//        cameraExist = cameraViewImpl.checkCameraExist();
+//        if (cameraExist) {
+//
+//        }
     }
 
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
-        cameraViewImpl.openCamera();
+        setSurfaceTextureListener(this);
+        // BEGIN_INCLUDE (configure_preview)
+        mCamera = CameraHelper.getDefaultFrontFacingCameraInstance();
+
+        try {
+            // Requires API level 11+, For backward compatibility use {@link setPreviewDisplay}
+            // with {@link SurfaceView}
+            mCamera.setPreviewTexture(getSurfaceTexture());
+        } catch (IOException e) {
+            Log.e(TAG, "Surface texture is unavailable or unsuitable" + e.getMessage());
+        }
+//        cameraViewImpl.openCamera();
     }
 
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
-        cameraViewImpl.releaseCamera();
+//        cameraViewImpl.releaseCamera();
+    }
+
+    @Override
+    public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
+        mCamera = Camera.open();
+
+        try {
+            // We need to make sure that our preview and recording video size are supported by the
+            // camera. Query camera to find all the sizes and choose the optimal size given the
+            // dimensions of our preview surface.
+            Camera.Parameters parameters = mCamera.getParameters();
+            List<Camera.Size> mSupportedPreviewSizes = parameters.getSupportedPreviewSizes();
+            List<Camera.Size> mSupportedVideoSizes = parameters.getSupportedVideoSizes();
+            Camera.Size optimalSize = CameraHelper.getOptimalVideoSize(mSupportedVideoSizes,
+                    mSupportedPreviewSizes, width, height);
+
+            // Use the same size for recording profile.
+            CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
+            profile.videoFrameWidth = optimalSize.width;
+            profile.videoFrameHeight = optimalSize.height;
+
+            // likewise for the camera object itself.
+            parameters.setPreviewSize(profile.videoFrameWidth, profile.videoFrameHeight);
+            mCamera.setParameters(parameters);
+            mCamera.startPreview();
+            mCamera.setPreviewTexture(surface);
+        } catch (IOException ioe) {
+            // Something bad happened
+        }
+    }
+
+    @Override
+    public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+        // Ignored, Camera does all the work for us
+    }
+
+    @Override
+    public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+        mCamera.stopPreview();
+        mCamera.release();
+        return true;
+    }
+
+    @Override
+    public void onSurfaceTextureUpdated(SurfaceTexture surface) {
+        // Invoked every time there's a new Camera preview frame
     }
 
     public void setUseFrontCamera(boolean use) {
