@@ -92,11 +92,17 @@ public class CameraView extends FrameLayout {
         this.backCameraId = backCameraId;
     }
 
-    public int getBackCameraId() {
-        return backCameraId;
-    }
-
-    public int getFrontCameraId() {
-        return frontCameraId;
+    int getCameraId() {
+        int id = 0;
+        if (useFrontCamera && frontCameraId >= 0) {
+            id = frontCameraId;
+        } else if (!useFrontCamera && backCameraId >= 0) {
+            id = backCameraId;
+        } else if (frontCameraId >= 0) {
+            id = frontCameraId;
+        } else if (backCameraId >= 0) {
+            id = backCameraId;
+        }
+        return id;
     }
 }

@@ -8,7 +8,6 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 
-import static android.R.attr.id;
 import static android.content.ContentValues.TAG;
 
 @SuppressWarnings("deprecation")
@@ -43,7 +42,6 @@ class CameraViewApi14 extends SurfaceView implements SurfaceHolder.Callback, Cam
     }
 
     private void init(AttributeSet attrs, int defStyle) {
-        openCamera();
         mHolder = getHolder();
         mHolder.addCallback(this);
         mHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
@@ -138,7 +136,7 @@ class CameraViewApi14 extends SurfaceView implements SurfaceHolder.Callback, Cam
 
         try {
             releaseCamera();
-            mCamera = Camera.open(id);
+            mCamera = Camera.open(cameraView.getCameraId());
             if (mCamera == null) {
                 cameraView.getOnCameraErrorListener().onCameraOpenFailed();
             }
