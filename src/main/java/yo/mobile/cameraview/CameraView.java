@@ -11,11 +11,13 @@ public class CameraView extends FrameLayout {
 
     private final static String TAG = CameraView.class.getSimpleName();
     private CameraViewImpl cameraViewImpl;
-    private boolean useFrontCamera;
+    private boolean useFrontCamera = true;
     private OnCameraErrorListener onCameraErrorListener;
     private int frontCameraId;
     private int backCameraId;
     private boolean cameraExist;
+    private int preferredHeight = 720;
+    private float preferredAspect = 4f / 3f;
 
     public interface OnCameraErrorListener {
         void onNoCamerasAvailable();
@@ -66,8 +68,20 @@ public class CameraView extends FrameLayout {
         this.useFrontCamera = use;
     }
 
+    public boolean isUseFrontCamera() {
+        return useFrontCamera;
+    }
+
     public boolean isCameraExist() {
         return cameraExist;
+    }
+
+    public boolean isFrontCameraExist() {
+        return backCameraId >= 0;
+    }
+
+    public boolean isBackCameraExist() {
+        return frontCameraId >= 0;
     }
 
     public OnCameraErrorListener getOnCameraErrorListener() {
@@ -96,7 +110,7 @@ public class CameraView extends FrameLayout {
         this.backCameraId = backCameraId;
     }
 
-    int getCameraId() {
+    int getCurrentCameraId() {
         int id = 0;
         if (useFrontCamera && frontCameraId >= 0) {
             id = frontCameraId;
@@ -108,5 +122,21 @@ public class CameraView extends FrameLayout {
             id = backCameraId;
         }
         return id;
+    }
+
+    public int getPreferredHeight() {
+        return preferredHeight;
+    }
+
+    public void setPreferredHeight(int preferredHeight) {
+        this.preferredHeight = preferredHeight;
+    }
+
+    public float getPreferredAspect() {
+        return preferredAspect;
+    }
+
+    public void setPreferredAspect(float preferredAspect) {
+        this.preferredAspect = preferredAspect;
     }
 }

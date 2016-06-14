@@ -3,11 +3,20 @@ package yo.mobile.cameraview;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.hardware.Camera;
+import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
+import yo.mobile.cameraview.util.CameraUtil;
+import yo.mobile.cameraview.util.Degrees;
 
 import static android.content.ContentValues.TAG;
 
@@ -17,10 +26,11 @@ class CameraViewApi14 extends SurfaceView implements SurfaceHolder.Callback, Cam
 
     private CameraView cameraView;
     private SurfaceHolder mHolder;
-    private Camera mCamera;
+    private Camera camera;
     private int mRatioWidth = 0;
     private int mRatioHeight = 0;
-    private int frontCameraId;
+    private int width;
+    private int height;
 
     CameraViewApi14(Context context, CameraView cameraView) {
         super(context);
@@ -37,8 +47,8 @@ class CameraViewApi14 extends SurfaceView implements SurfaceHolder.Callback, Cam
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
         try {
-//            mCamera.setPreviewDisplay(holder);
-//            mCamera.startPreview();
+//            camera.setPreviewDisplay(holder);
+//            camera.startPreview();
         } catch (Throwable e) {
             Log.d(TAG, "Error setting camera preview: " + e.getMessage());
         }
@@ -54,47 +64,17 @@ class CameraViewApi14 extends SurfaceView implements SurfaceHolder.Callback, Cam
         if (mHolder.getSurface() == null)
             return;
         try {
-            mCamera.stopPreview();
+            camera.stopPreview();
         } catch (Exception ignored) {
         }
         try {
-            mCamera.setPreviewDisplay(mHolder);
-            mCamera.startPreview();
+            width = w;
+            height = h;
+            setParameters();
+            camera.setPreviewDisplay(mHolder);
+            camera.startPreview();
         } catch (Exception e) {
             Log.d(TAG, "Error starting camera preview: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Sets the aspect ratio for this view. The size of the view will be measured based on the ratio
-     * calculated from the parameters. Note that the actual sizes of parameters don't matter, that
-     * is, calling setAspectRatio(2, 3) and setAspectRatio(4, 6) make the same result.
-     *
-     * @param width  Relative horizontal size
-     * @param height Relative vertical size
-     */
-    public void setAspectRatio(int width, int height) {
-        if (width < 0 || height < 0) {
-            throw new IllegalArgumentException("Size cannot be negative.");
-        }
-        mRatioWidth = width;
-        mRatioHeight = height;
-        requestLayout();
-    }
-
-    @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        int width = MeasureSpec.getSize(widthMeasureSpec);
-        int height = MeasureSpec.getSize(heightMeasureSpec);
-        if (0 == mRatioWidth || 0 == mRatioHeight) {
-            setMeasuredDimension(width, height);
-        } else {
-            if (width < height * mRatioWidth / mRatioHeight) {
-                setMeasuredDimension(width, width * mRatioHeight / mRatioWidth);
-            } else {
-                setMeasuredDimension(height * mRatioWidth / mRatioHeight, height);
-            }
         }
     }
 
@@ -127,8 +107,8 @@ class CameraViewApi14 extends SurfaceView implements SurfaceHolder.Callback, Cam
     public void openCamera() {
         try {
             releaseCamera();
-            mCamera = Camera.open(cameraView.getCameraId());
-            if (mCamera == null) {
+            camera = Camera.open(cameraView.getCurrentCameraId());
+            if (camera == null) {
                 cameraView.getOnCameraErrorListener().onCameraOpenFailed();
             }
         } catch (Exception e) {
@@ -137,11 +117,73 @@ class CameraViewApi14 extends SurfaceView implements SurfaceHolder.Callback, Cam
         }
     }
 
+    private void setParameters() {
+        Camera.Parameters parameters = camera.getParameters();
+        List<Camera.Size> videoSizes = parameters.getSupportedVideoSizes();
+        if (videoSizes == null || videoSizes.size() == 0) {
+            videoSizes = parameters.getSupportedPreviewSizes();
+        }
+        Camera.Size selectedSize = videoSizes.get(0);
+        for (Camera.Size size : videoSizes) {
+            if (size.height <= cameraView.getPreferredHeight()) {
+                if (size.width == size.height * cameraView.getPreferredAspect()) {
+                    selectedSize = size;
+                }
+                break;
+            }
+        }
+        List<Camera.Size> bigEnough = new ArrayList<>();
+        int w = selectedSize.width;
+        int h = selectedSize.height;
+        for (Camera.Size option : videoSizes) {
+            if (option.height == width * h / w &&
+                    option.width >= width && option.height >= height) {
+                bigEnough.add(option);
+            }
+        }
+
+        // Pick the smallest of those, assuming we found any
+        if (bigEnough.size() > 0) {
+            selectedSize = Collections.min(bigEnough, new Comparator<Camera.Size>() {
+                @Override
+                public int compare(Camera.Size lhs, Camera.Size rhs) {
+                    return Long.signum((long) lhs.width * lhs.height - (long) rhs.width * rhs.height);
+                }
+            });
+        }
+
+        parameters.setPreviewSize(selectedSize.width, selectedSize.height);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            parameters.setRecordingHint(true);
+        }
+        Camera.CameraInfo info =
+                new Camera.CameraInfo();
+        Camera.getCameraInfo(cameraView.getCurrentCameraId(), info);
+        final int deviceOrientation = Degrees.getDisplayRotation(getContext());
+        int displayOrientation = Degrees.getDisplayOrientation(
+                info.orientation, deviceOrientation, info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT);
+        Log.d("CameraFragment", String.format("Orientations: Sensor = %d˚, Device = %d˚, Display = %d˚",
+                info.orientation, deviceOrientation, displayOrientation));
+
+        int previewOrientation;
+        if (CameraUtil.isArcWelder()) {
+            previewOrientation = 0;
+        } else {
+            previewOrientation = displayOrientation;
+            if (Degrees.isPortrait(deviceOrientation) && cameraView.isUseFrontCamera()) {
+                previewOrientation = Degrees.mirror(displayOrientation);
+            }
+        }
+        parameters.setRotation(previewOrientation);
+        camera.setDisplayOrientation(previewOrientation);
+        camera.setParameters(parameters);
+    }
+
     @Override
     public void releaseCamera() {
-        if (mCamera != null) {
-            mCamera.release();
-            mCamera = null;
+        if (camera != null) {
+            camera.release();
+            camera = null;
         }
     }
 }
