@@ -2,19 +2,25 @@ package yo.mobile.cameraview;
 
 import android.content.Context;
 import android.graphics.SurfaceTexture;
-import android.hardware.Camera;
-import android.media.CamcorderProfile;
+import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.TextureView;
 
-import java.io.IOException;
-import java.util.List;
-
-import yo.mobile.cameraview.util.CameraHelper;
-
 @SuppressWarnings("deprecation")
 public class CameraView extends TextureView implements TextureView.SurfaceTextureListener {
+
+    private static final CameraViewImpl IMPL;
+
+    static {
+        if (Build.VERSION.SDK_INT >= 21) {
+            IMPL = new Camera1();
+//        } else if (Build.VERSION.SDK_INT >= 17) {
+//            IMPL = new CardViewJellybeanMr1();
+        } else {
+            IMPL = new Camera1();
+        }
+    }
 
     private final static String TAG = CameraView.class.getSimpleName();
     //    private CameraViewImpl cameraViewImpl;
@@ -25,7 +31,8 @@ public class CameraView extends TextureView implements TextureView.SurfaceTextur
     private boolean cameraExist;
     private int preferredHeight = 720;
     private float preferredAspect = 4f / 3f;
-    private Camera mCamera;
+    private int mRatioWidth;
+    private int mRatioHeight;
 
     public interface OnCameraErrorListener {
         void onNoCamerasAvailable();
@@ -64,59 +71,17 @@ public class CameraView extends TextureView implements TextureView.SurfaceTextur
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
         setSurfaceTextureListener(this);
-        mCamera = CameraHelper.getDefaultCameraInstance();
-        try {
-            // Requires API level 11+, For backward compatibility use {@link setPreviewDisplay}
-            // with {@link SurfaceView}
-            mCamera.setPreviewTexture(getSurfaceTexture());
-        } catch (IOException e) {
-            Log.e(TAG, "Surface texture is unavailable or unsuitable" + e.getMessage());
-        }
-//        cameraViewImpl.openCamera();
     }
 
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
-        releaseCamera();
-    }
-
-    private void releaseCamera() {
-        if (mCamera != null) {
-            // release the camera for other applications
-            mCamera.release();
-            mCamera = null;
-        }
+        IMPL.releaseCamera();
     }
 
     @Override
     public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
-
-        try {
-            releaseCamera();
-            mCamera = Camera.open();
-            // We need to make sure that our preview and recording video size are supported by the
-            // camera. Query camera to find all the sizes and choose the optimal size given the
-            // dimensions of our preview surface.
-            Camera.Parameters parameters = mCamera.getParameters();
-            List<Camera.Size> mSupportedPreviewSizes = parameters.getSupportedPreviewSizes();
-            List<Camera.Size> mSupportedVideoSizes = parameters.getSupportedVideoSizes();
-            Camera.Size optimalSize = CameraHelper.getOptimalVideoSize(mSupportedVideoSizes,
-                    mSupportedPreviewSizes, width, height);
-
-            // Use the same size for recording profile.
-            CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
-            profile.videoFrameWidth = optimalSize.width;
-            profile.videoFrameHeight = optimalSize.height;
-
-            // likewise for the camera object itself.
-            parameters.setPreviewSize(profile.videoFrameWidth, profile.videoFrameHeight);
-            mCamera.setParameters(parameters);
-            mCamera.startPreview();
-            mCamera.setPreviewTexture(surface);
-        } catch (Exception e) {
-            getOnCameraErrorListener().onCameraOpenFailed(e);
-        }
+        IMPL.openCamera(surface, width, height);
     }
 
     @Override
@@ -126,14 +91,47 @@ public class CameraView extends TextureView implements TextureView.SurfaceTextur
 
     @Override
     public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
-        mCamera.stopPreview();
-        mCamera.release();
+        IMPL.releaseCamera();
         return true;
     }
 
     @Override
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
         // Invoked every time there's a new Camera preview frame
+    }
+
+
+    /**
+     * Sets the aspect ratio for this view. The size of the view will be measured based on the ratio
+     * calculated from the parameters. Note that the actual sizes of parameters don't matter, that
+     * is, calling setAspectRatio(2, 3) and setAspectRatio(4, 6) make the same result.
+     *
+     * @param width  Relative horizontal size
+     * @param height Relative vertical size
+     */
+    public void setAspectRatio(int width, int height) {
+        if (width < 0 || height < 0) {
+            throw new IllegalArgumentException("Size cannot be negative.");
+        }
+        mRatioWidth = width;
+        mRatioHeight = height;
+        requestLayout();
+    }
+
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+        int width = MeasureSpec.getSize(widthMeasureSpec);
+        int height = MeasureSpec.getSize(heightMeasureSpec);
+        if (0 == mRatioWidth || 0 == mRatioHeight) {
+            setMeasuredDimension(width, height);
+        } else {
+            if (width < height * mRatioWidth / mRatioHeight) {
+                setMeasuredDimension(width, width * mRatioHeight / mRatioWidth);
+            } else {
+                setMeasuredDimension(height * mRatioWidth / mRatioHeight, height);
+            }
+        }
     }
 
     public void setUseFrontCamera(boolean use) {

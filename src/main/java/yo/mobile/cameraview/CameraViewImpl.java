@@ -1,15 +1,16 @@
 package yo.mobile.cameraview;
 
 
-import android.view.View;
+import android.content.Context;
+import android.graphics.SurfaceTexture;
 
 public interface CameraViewImpl {
 
-    View getView();
+    void initialize(CameraView cameraView, Context context);
 
     boolean checkCameraExist();
 
-    void openCamera();
+    void openCamera(SurfaceTexture surface, int width, int height);
 
     void releaseCamera();
 }
