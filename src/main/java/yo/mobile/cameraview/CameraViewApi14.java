@@ -8,11 +8,13 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 
+import static android.R.attr.id;
 import static android.content.ContentValues.TAG;
 
 @SuppressWarnings("deprecation")
 class CameraViewApi14 extends SurfaceView implements SurfaceHolder.Callback, CameraViewImpl {
 
+    private CameraView cameraView;
     private SurfaceHolder mHolder;
     private Camera mCamera;
     private int mRatioWidth = 0;
@@ -34,24 +36,14 @@ class CameraViewApi14 extends SurfaceView implements SurfaceHolder.Callback, Cam
         init(attrs, defStyle);
     }
 
-    private void init(AttributeSet attrs, int defStyle) {
-        int numberOfCameras = Camera.getNumberOfCameras();
-        if (numberOfCameras == 0) {
-//            throw new Exception("No cameras are available on this device.");
-            return;
-        }
+    CameraViewApi14(Context context, CameraView cameraView) {
+        super(context);
+        this.cameraView = cameraView;
+        init(null, 0);
+    }
 
-        for (int i = 0; i < numberOfCameras; i++) {
-            Camera.CameraInfo info = new Camera.CameraInfo();
-            Camera.getCameraInfo(i, info);
-            if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-                frontCameraId = i;
-            } else if (info.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
-//                mInterface.setBackCamera(i);
-            }
-        }
-//        final int toOpen = getCurrentCameraId();
-        mCamera = Camera.open(frontCameraId);
+    private void init(AttributeSet attrs, int defStyle) {
+        openCamera();
         mHolder = getHolder();
         mHolder.addCallback(this);
         mHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
@@ -124,5 +116,43 @@ class CameraViewApi14 extends SurfaceView implements SurfaceHolder.Callback, Cam
     @Override
     public View getView() {
         return this;
+    }
+
+    @Override
+    public void openCamera() {
+        int numberOfCameras = Camera.getNumberOfCameras();
+        if (numberOfCameras == 0) {
+            cameraView.getOnCameraErrorListener().onNoCamerasAvailable();
+            return;
+        }
+
+        for (int i = 0; i < numberOfCameras; i++) {
+            Camera.CameraInfo info = new Camera.CameraInfo();
+            Camera.getCameraInfo(i, info);
+            if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+                cameraView.setFrontCameraId(i);
+            } else if (info.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
+                cameraView.setBackCameraId(i);
+            }
+        }
+
+        try {
+            releaseCamera();
+            mCamera = Camera.open(id);
+            if (mCamera == null) {
+                cameraView.getOnCameraErrorListener().onCameraOpenFailed();
+            }
+        } catch (Exception e) {
+            cameraView.getOnCameraErrorListener().onCameraOpenFailed();
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void releaseCamera() {
+        if (mCamera != null) {
+            mCamera.release();
+            mCamera = null;
+        }
     }
 }
