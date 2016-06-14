@@ -30,7 +30,7 @@ public class CameraView extends TextureView implements TextureView.SurfaceTextur
     public interface OnCameraErrorListener {
         void onNoCamerasAvailable();
 
-        void onCameraOpenFailed();
+        void onCameraOpenFailed(Exception e);
     }
 
     public CameraView(Context context) {
@@ -64,9 +64,7 @@ public class CameraView extends TextureView implements TextureView.SurfaceTextur
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
         setSurfaceTextureListener(this);
-        // BEGIN_INCLUDE (configure_preview)
-        mCamera = CameraHelper.getDefaultFrontFacingCameraInstance();
-
+        mCamera = CameraHelper.getDefaultCameraInstance();
         try {
             // Requires API level 11+, For backward compatibility use {@link setPreviewDisplay}
             // with {@link SurfaceView}
@@ -80,14 +78,23 @@ public class CameraView extends TextureView implements TextureView.SurfaceTextur
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
-//        cameraViewImpl.releaseCamera();
+        releaseCamera();
+    }
+
+    private void releaseCamera() {
+        if (mCamera != null) {
+            // release the camera for other applications
+            mCamera.release();
+            mCamera = null;
+        }
     }
 
     @Override
     public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
-        mCamera = Camera.open();
 
         try {
+            releaseCamera();
+            mCamera = Camera.open();
             // We need to make sure that our preview and recording video size are supported by the
             // camera. Query camera to find all the sizes and choose the optimal size given the
             // dimensions of our preview surface.
@@ -107,8 +114,8 @@ public class CameraView extends TextureView implements TextureView.SurfaceTextur
             mCamera.setParameters(parameters);
             mCamera.startPreview();
             mCamera.setPreviewTexture(surface);
-        } catch (IOException ioe) {
-            // Something bad happened
+        } catch (Exception e) {
+            getOnCameraErrorListener().onCameraOpenFailed(e);
         }
     }
 
@@ -157,8 +164,9 @@ public class CameraView extends TextureView implements TextureView.SurfaceTextur
             }
 
             @Override
-            public void onCameraOpenFailed() {
+            public void onCameraOpenFailed(Exception e) {
                 Log.e(TAG, "Open camera failed");
+                e.printStackTrace();
             }
         };
     }
