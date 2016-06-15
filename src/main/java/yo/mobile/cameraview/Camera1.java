@@ -6,6 +6,7 @@ import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
 import android.util.Log;
+import android.view.WindowManager;
 
 import java.io.IOException;
 import java.util.List;
@@ -19,15 +20,15 @@ public class Camera1 implements CameraViewImpl {
     private CameraView cameraView;
     private Context context;
     private Camera camera;
+    private WindowManager windowManager;
 
     @Override
     public void initialize(CameraView cameraView, Context context) {
         this.cameraView = cameraView;
         this.context = context;
-        camera = Camera1Helper.getDefaultCameraInstance();
+        camera = Camera1Helper.getDefaultFrontFacingCameraInstance();
+        windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
         try {
-            // Requires API level 11+, For backward compatibility use {@link setPreviewDisplay}
-            // with {@link SurfaceView}
             camera.setPreviewTexture(cameraView.getSurfaceTexture());
         } catch (IOException e) {
             Log.e(TAG, "Surface texture is unavailable or unsuitable" + e.getMessage());
@@ -50,8 +51,7 @@ public class Camera1 implements CameraViewImpl {
             Camera.Parameters parameters = camera.getParameters();
             List<Camera.Size> mSupportedPreviewSizes = parameters.getSupportedPreviewSizes();
             List<Camera.Size> mSupportedVideoSizes = parameters.getSupportedVideoSizes();
-            Camera.Size optimalSize = Camera1Helper.getOptimalVideoSize(mSupportedVideoSizes,
-                    mSupportedPreviewSizes, width, height);
+            Camera.Size optimalSize = Camera1Helper.getOptimalPreviewSize(mSupportedVideoSizes, height);
 
             // Use the same size for recording profile.
             CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
@@ -61,6 +61,7 @@ public class Camera1 implements CameraViewImpl {
             // likewise for the camera object itself.
             parameters.setPreviewSize(profile.videoFrameWidth, profile.videoFrameHeight);
             camera.setParameters(parameters);
+            Camera1Helper.setCameraDisplayOrientation(windowManager, Camera1Helper.getFrontCameraID(), camera);
             camera.startPreview();
             camera.setPreviewTexture(surface);
         } catch (Exception e) {
