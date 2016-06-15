@@ -10,8 +10,6 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.TextureView;
 
-import yo.mobile.cameraview.util.Camera2Helper;
-
 @SuppressWarnings("deprecation")
 public class CameraView extends TextureView implements TextureView.SurfaceTextureListener {
 
@@ -54,11 +52,11 @@ public class CameraView extends TextureView implements TextureView.SurfaceTextur
                 != PackageManager.PERMISSION_GRANTED) {
             throw new RuntimeException("No camera permission - Use FragmentCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);");
         }
-        if (Build.VERSION.SDK_INT >= 21 && Camera2Helper.hasCamera2(getContext())) {
-            IMPL = new Camera2();
-        } else {
-            IMPL = new Camera1();
-        }
+//        if (Build.VERSION.SDK_INT >= 21 && Camera2Helper.hasCamera2(getContext())) {
+//            IMPL = new Camera1Api();
+//        } else {
+        IMPL = new Camera1Api();
+//        }
         IMPL.initialize(this, getContext());
     }
 

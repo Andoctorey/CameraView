@@ -35,7 +35,7 @@ import yo.mobile.cameraview.util.Camera2Helper;
 import static android.content.ContentValues.TAG;
 
 @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-public class Camera2 implements CameraViewImpl {
+public class Camera2Api implements CameraViewImpl {
 
     private CameraView cameraView;
     private Context context;

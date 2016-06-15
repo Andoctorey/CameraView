@@ -15,7 +15,7 @@ import yo.mobile.cameraview.util.Camera1Helper;
 
 import static android.content.ContentValues.TAG;
 
-public class Camera1 implements CameraViewImpl {
+public class Camera1Api implements CameraViewImpl {
 
     private CameraView cameraView;
     private Context context;
@@ -26,7 +26,7 @@ public class Camera1 implements CameraViewImpl {
     public void initialize(CameraView cameraView, Context context) {
         this.cameraView = cameraView;
         this.context = context;
-        camera = Camera1Helper.getDefaultFrontFacingCameraInstance();
+        camera = Camera1Helper.getDefaultCameraInstance();
         windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
         try {
             camera.setPreviewTexture(cameraView.getSurfaceTexture());
@@ -61,7 +61,7 @@ public class Camera1 implements CameraViewImpl {
             // likewise for the camera object itself.
             parameters.setPreviewSize(profile.videoFrameWidth, profile.videoFrameHeight);
             camera.setParameters(parameters);
-            Camera1Helper.setCameraDisplayOrientation(windowManager, Camera1Helper.getFrontCameraID(), camera);
+            Camera1Helper.setCameraDisplayOrientation(windowManager, Camera1Helper.getDefaultCameraID(), camera);
             camera.startPreview();
             camera.setPreviewTexture(surface);
         } catch (Exception e) {
